@@ -144,4 +144,32 @@ if predict_btn:
                 y="Predicted_MW",
                 title=f"ComEd Hourly Electricity Demand Forecast ({start_date} to {end_date})",
                 labels={
-                    "Predicted
+                    "Predicted_MW": "Electricity Consumption (MW)",
+                    "Datetime": "Date & Time (CST/CDT)"
+                }
+            )
+            fig.update_layout(hovermode="x unified")
+            st.plotly_chart(fig, use_container_width=True)
+
+            # Hourly Data Table & CSV Export
+            with st.expander("View Hourly Forecast Data & Fetched Features"):
+                display_cols = [
+                    "Datetime", "Predicted_MW", "temperature_c",
+                    "apparent_temp_c", "rain_mm", "is_weekend", "is_holiday", "is_dst"
+                ]
+                st.dataframe(feat_df[display_cols], use_container_width=True)
+
+                csv = feat_df[display_cols].to_csv(index=False).encode("utf-8")
+                st.download_button(
+                    label="Download Forecast CSV",
+                    data=csv,
+                    file_name=f"comed_forecast_{start_date}_to_{end_date}.csv",
+                    mime="text/csv"
+                )
+
+        except requests.exceptions.RequestException as e:
+            st.error(f"Weather API error: {e}")
+        except Exception as e:
+            st.error(f"Error generating forecast: {e}")
+else:
+    st.info("Select your desired date interval in the sidebar and click **Predict Consumption**.")
