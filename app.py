@@ -90,6 +90,29 @@ html, body, [class*="css"] {
     mask-image: linear-gradient(to bottom, black, transparent 78%);
 }
 
+/* Restored floating bubbles and energy particles from the original design. */
+.bubble-field { position: absolute; inset: 0; overflow: hidden; }
+.energy-bubble {
+    position: absolute; bottom: -125px; display: block; border-radius: 50%;
+    background: radial-gradient(circle at 30% 28%,
+        rgba(255,255,255,.62), rgba(130,205,155,.25) 48%, rgba(22,131,72,.10) 100%);
+    border: 1px solid rgba(31,125,72,.20);
+    box-shadow: inset 0 0 14px rgba(255,255,255,.18), 0 5px 20px rgba(31,105,65,.06);
+    opacity: 0; will-change: transform, opacity;
+    animation: bubbleRise var(--duration) linear var(--delay) infinite;
+}
+.energy-bubble::after {
+    content: ''; position: absolute; width: 19%; height: 19%; top: 19%; left: 23%;
+    border-radius: 50%; background: rgba(255,255,255,.52); filter: blur(1px);
+}
+.energy-bolt {
+    position: absolute; bottom: -70px; color: rgba(21,128,61,.20);
+    font-size: var(--size); line-height: 1; opacity: 0;
+    text-shadow: 0 3px 12px rgba(21,128,61,.12);
+    animation: boltRise var(--duration) linear var(--delay) infinite,
+               boltSway 5.5s ease-in-out var(--delay) infinite;
+}
+
 /* Sidebar */
 [data-testid="stSidebar"] {
     background: rgba(232, 242, 235, .94);
@@ -253,6 +276,19 @@ hr { border-color: rgba(28,105,65,.16) !important; }
 @keyframes cardEnter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes orbDrift { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(75px,55px,0) scale(1.18); } }
+@keyframes bubbleRise {
+    0% { transform: translate3d(0,0,0) scale(.72); opacity: 0; }
+    9% { opacity: .48; }
+    78% { opacity: .30; }
+    100% { transform: translate3d(var(--drift),-115vh,0) scale(1.12); opacity: 0; }
+}
+@keyframes boltRise {
+    0% { transform: translate3d(0,0,0) rotate(-8deg); opacity: 0; }
+    12% { opacity: .34; }
+    82% { opacity: .23; }
+    100% { transform: translate3d(24px,-112vh,0) rotate(12deg); opacity: 0; }
+}
+@keyframes boltSway { 0%,100% { margin-left: -9px; } 50% { margin-left: 9px; } }
 @keyframes boltFloat { 0%,100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-5px) rotate(4deg); } }
 @keyframes statusPulse { 0%,100% { box-shadow: 0 0 0 4px rgba(143,240,174,.13); } 50% { box-shadow: 0 0 0 7px rgba(143,240,174,.04); } }
 
@@ -277,13 +313,40 @@ st.markdown(UI_CSS, unsafe_allow_html=True)
 
 
 def background_layer():
-    return """
+    # Fixed seed keeps particle positions stable across Streamlit reruns.
+    rnd = random.Random(23)
+    particles = []
+
+    for _ in range(18):
+        size = rnd.randint(18, 68)
+        left = rnd.randint(1, 98)
+        duration = rnd.randint(17, 32)
+        delay = -rnd.randint(0, 28)
+        drift = rnd.randint(-42, 42)
+        particles.append(
+            f'<span class="energy-bubble" style="left:{left}%;width:{size}px;height:{size}px;'
+            f'--duration:{duration}s;--delay:{delay}s;--drift:{drift}px"></span>'
+        )
+
+    for _ in range(8):
+        left = rnd.randint(3, 97)
+        duration = rnd.randint(19, 31)
+        delay = -rnd.randint(0, 24)
+        size = rnd.randint(19, 29)
+        particles.append(
+            f'<span class="energy-bolt" style="left:{left}%;font-size:{size}px;'
+            f'--duration:{duration}s;--delay:{delay}s">⚡</span>'
+        )
+
+    return f"""
     <div class="bg-layer" aria-hidden="true">
         <div class="ambient-grid"></div>
         <div class="ambient-orb orb-a"></div>
         <div class="ambient-orb orb-b"></div>
+        <div class="bubble-field">{"".join(particles)}</div>
     </div>
     """
+
 
 
 st.markdown(background_layer(), unsafe_allow_html=True)
