@@ -225,7 +225,7 @@ def style_fig(fig, height=450):
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(235, 242, 237, 0.82)",
         font=dict(color="#0f2419"),
-        margin=dict(l=10, r=10, t=70, b=10),
+        margin=dict(l=10, r=10, t=100, b=10),
     )
     fig.update_xaxes(gridcolor="rgba(21,128,61,0.14)")
     fig.update_yaxes(gridcolor="rgba(21,128,61,0.14)")
@@ -495,12 +495,26 @@ if st.session_state.has_run:
                     text=[f"Peak {peak:,.0f} MW"], textposition="top center",
                 ))
                 fig.update_layout(
-                    title=f"Hourly demand forecast ({start_date} to {end_date})",
-                    xaxis_title="Date & time (Chicago local)", yaxis_title="Electricity demand (MW)",
-                    hovermode="x unified", legend=dict(orientation="h", y=1.12, x=0),
+                    title=dict(
+                        text=f"Hourly demand forecast ({start_date} to {end_date})",
+                        x=0,
+                        y=0.97,
+                        xanchor="left",
+                        yanchor="top",
+                    ),
+                    xaxis_title="Date & time (Chicago local)",
+                    yaxis_title="Electricity demand (MW)",
+                    hovermode="x unified",
+                    legend=dict(
+                        orientation="h",
+                        x=0,
+                        y=1.02,
+                        xanchor="left",
+                        yanchor="bottom",
+                    ),
                 )
                 fig.update_xaxes(rangeslider=dict(visible=True, thickness=0.06))
-                st.plotly_chart(style_fig(fig, 520), use_container_width=True)
+                st.plotly_chart(style_fig(fig, 540), use_container_width=True)
                 st.caption("💡 Drag the slider under the chart to zoom into any time window.")
 
             with tab2:
@@ -572,12 +586,25 @@ if st.session_state.has_run:
                     x=feat_df["Datetime"], y=feat_df["temperature_c"],
                     name="Temperature (°C)", yaxis="y2", line=dict(color="#ea580c", width=2)))
                 fig2.update_layout(
-                    title="Predicted demand vs temperature",
+                    title=dict(
+                        text="Predicted demand vs temperature",
+                        x=0,
+                        y=0.97,
+                        xanchor="left",
+                        yanchor="top",
+                    ),
                     yaxis=dict(title="Demand (MW)"),
                     yaxis2=dict(title="Temperature (°C)", overlaying="y", side="right"),
-                    hovermode="x unified", legend=dict(orientation="h", y=1.12, x=0),
+                    hovermode="x unified",
+                    legend=dict(
+                        orientation="h",
+                        x=0,
+                        y=1.02,
+                        xanchor="left",
+                        yanchor="bottom",
+                    ),
                 )
-                st.plotly_chart(style_fig(fig2, 440), use_container_width=True)
+                st.plotly_chart(style_fig(fig2, 460), use_container_width=True)
 
                 sc = px.scatter(
                     feat_df, x="temperature_c", y="Predicted_MW", color="Hour",
