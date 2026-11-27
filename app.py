@@ -11,13 +11,13 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 # ------------------------------------------------------------------
-# Page configuration
+# Page configuration (starts collapsed; toggle open/close anytime)
 # ------------------------------------------------------------------
 st.set_page_config(
     page_title="ComEd Electricity Demand Predictor",
     page_icon="⚡",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",  # Change to "expanded" if you want it open on first load
 )
 
 # Fixed coordinates for Chicago / ComEd service area
@@ -29,55 +29,83 @@ TIMEZONE = "America/Chicago"
 MODEL_MAE = 615.52   # Mean Absolute Error (MW)
 MODEL_RMSE = 952.93  # Root Mean Squared Error (MW)
 
-GREEN = "#16a34a"
-GREEN_DARK = "#14532d"
-GREEN_LIGHT = "#bbf7d0"
+GREEN = "#15803d"
+GREEN_DARK = "#0f2e1f"
+GREEN_LIGHT = "#a7d7b8"
 
 # ------------------------------------------------------------------
-# White + green theme with animated background
+# Soft muted sage-gray + green theme with animated background
 # ------------------------------------------------------------------
 st.markdown(
     f"""
     <style>
-    /* ---------- Base: white / green ---------- */
+    /* ---------- Base: softer, low-glare sage-gray / green ---------- */
     .stApp {{
-        background: linear-gradient(160deg, #ffffff 0%, #f0fdf4 45%, #dcfce7 100%);
-        color: #0f2e1f;
+        background: linear-gradient(160deg, #dde7e0 0%, #d2dfd6 48%, #c5d6cb 100%);
+        color: #0f2419;
     }}
-    [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{background: transparent;}}
+    [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
+        background: transparent;
+    }}
     h1, h2, h3, h4, h5, label, p, span, div {{color: inherit;}}
-    .block-container {{padding-top: 2rem; padding-bottom: 3rem; max-width: 1300px;
-                       position: relative; z-index: 2; animation: fadeUp .7s ease both;}}
-    [data-testid="stSidebar"] {{
-        background: rgba(255,255,255,0.85);
-        backdrop-filter: blur(10px);
-        border-right: 1px solid rgba(22,163,74,0.25);
-        z-index: 3;
+    .block-container {{
+        padding-top: 2rem; padding-bottom: 3rem; max-width: 1300px;
+        position: relative; z-index: 2; animation: fadeUp .7s ease both;
     }}
 
-    /* ---------- Animated background layer ---------- */
+    /* ---------- Collapsible Sidebar & Always-Visible Toggle Buttons ---------- */
+    [data-testid="stSidebar"] {{
+        background: rgba(210, 223, 214, 0.95);
+        backdrop-filter: blur(10px);
+        border-right: 1px solid rgba(21, 128, 61, 0.28);
+        z-index: 100;
+    }}
+    [data-testid="collapsedControl"],
+    [data-testid="stExpandSidebarButton"],
+    [data-testid="stSidebarCollapseButton"] {{
+        z-index: 999 !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }}
+    [data-testid="collapsedControl"] button,
+    [data-testid="stExpandSidebarButton"] button,
+    [data-testid="stSidebarCollapseButton"] button {{
+        background-color: #15803d !important;
+        color: #ffffff !important;
+        border-radius: 10px !important;
+        border: 1px solid rgba(255, 255, 255, 0.35) !important;
+        box-shadow: 0 3px 10px rgba(15, 36, 25, 0.22) !important;
+    }}
+    [data-testid="collapsedControl"] svg,
+    [data-testid="stExpandSidebarButton"] svg,
+    [data-testid="stSidebarCollapseButton"] svg {{
+        fill: #ffffff !important;
+        color: #ffffff !important;
+    }}
+
+    /* ---------- Animated background layer (toned down) ---------- */
     .bg-layer {{position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;}}
     .bubble {{
         position: absolute; bottom: -120px; border-radius: 50%;
-        background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(34,197,94,0.35));
-        border: 1px solid rgba(22,163,74,0.25);
+        background: radial-gradient(circle at 30% 30%, rgba(235,242,237,0.65), rgba(22,163,74,0.22));
+        border: 1px solid rgba(21,128,61,0.20);
         animation: floatUp linear infinite;
     }}
     .bolt {{
-        position: absolute; bottom: -60px; font-size: 26px; opacity: .22;
+        position: absolute; bottom: -60px; font-size: 26px; opacity: .16;
         animation: floatUp linear infinite, sway 5s ease-in-out infinite;
     }}
     .glow {{
         position: absolute; width: 520px; height: 520px; border-radius: 50%;
-        filter: blur(90px); opacity: .45;
-        background: radial-gradient(circle, rgba(74,222,128,.55), rgba(255,255,255,0) 70%);
+        filter: blur(95px); opacity: .30;
+        background: radial-gradient(circle, rgba(34,197,94,.42), rgba(210,223,214,0) 70%);
         animation: drift 18s ease-in-out infinite alternate;
     }}
     .glow.g1 {{top: -120px; left: -100px;}}
     .glow.g2 {{bottom: -160px; right: -120px; animation-delay: -9s;}}
     @keyframes floatUp {{
         0%   {{transform: translateY(0) scale(.8); opacity: 0;}}
-        10%  {{opacity: .9;}}
+        10%  {{opacity: .8;}}
         100% {{transform: translateY(-115vh) scale(1.15); opacity: 0;}}
     }}
     @keyframes sway {{0%,100% {{margin-left: -14px;}} 50% {{margin-left: 14px;}}}}
@@ -89,64 +117,69 @@ st.markdown(
     @keyframes shine {{0% {{background-position: 0% 50%;}} 100% {{background-position: 200% 50%;}}}}
     @keyframes pulse {{0%,100% {{transform: scale(1);}} 50% {{transform: scale(1.12);}}}}
 
-    /* ---------- Hero ---------- */
+    /* ---------- Hero (richer, less glaring green) ---------- */
     .hero {{
-        background: linear-gradient(120deg, #15803d, #22c55e, #4ade80, #15803d);
+        background: linear-gradient(120deg, #14532d, #15803d, #16a34a, #14532d);
         background-size: 300% 300%;
-        animation: shine 8s linear infinite;
-        padding: 2rem 2.2rem; border-radius: 20px; margin-bottom: 1.5rem;
-        box-shadow: 0 12px 32px rgba(22,163,74,0.30);
+        animation: shine 9s linear infinite;
+        padding: 1.9rem 2.2rem; border-radius: 20px; margin-bottom: 1.5rem;
+        box-shadow: 0 12px 30px rgba(20, 83, 45, 0.28);
     }}
-    .hero h1 {{color: #ffffff !important; margin: 0; font-size: 2.2rem; font-weight: 800;}}
+    .hero h1 {{color: #f3f7f4 !important; margin: 0; font-size: 2.15rem; font-weight: 800;}}
     .hero h1 .bolt-icon {{display: inline-block; animation: pulse 1.6s ease-in-out infinite;}}
-    .hero p {{color: #ecfdf5 !important; margin: .5rem 0 0 0; font-size: 1.02rem;}}
+    .hero p {{color: #dcfce7 !important; margin: .5rem 0 0 0; font-size: 1.02rem;}}
     .hero .badge {{
         display: inline-block; margin: .9rem .4rem 0 0; padding: .25rem .8rem; border-radius: 999px;
-        background: rgba(255,255,255,0.22); color: #ffffff !important; font-size: .8rem; font-weight: 600;
+        background: rgba(255,255,255,0.18); color: #f3f7f4 !important; font-size: .8rem; font-weight: 600;
         transition: transform .2s ease, background .2s ease;
     }}
-    .hero .badge:hover {{transform: translateY(-3px); background: rgba(255,255,255,0.35);}}
+    .hero .badge:hover {{transform: translateY(-3px); background: rgba(255,255,255,0.30);}}
 
-    /* ---------- Cards ---------- */
+    /* ---------- Cards (soft off-white sage, easy on eyes) ---------- */
     .kpi-card {{
         border-radius: 16px; padding: 1.1rem 1.3rem; height: 100%;
-        background: rgba(255,255,255,0.92);
-        border: 1px solid rgba(22,163,74,0.18);
+        background: rgba(235, 242, 237, 0.92);
+        border: 1px solid rgba(21, 128, 61, 0.22);
         border-left: 6px solid var(--accent);
-        box-shadow: 0 4px 14px rgba(22,163,74,0.10);
+        box-shadow: 0 4px 14px rgba(15, 36, 25, 0.08);
         transition: transform .25s ease, box-shadow .25s ease;
         animation: fadeUp .6s ease both;
     }}
-    .kpi-card:hover {{transform: translateY(-6px); box-shadow: 0 14px 28px rgba(22,163,74,0.25);}}
-    .kpi-label {{font-size: .78rem; text-transform: uppercase; letter-spacing: .07em; color: #4b6b58; font-weight: 700;}}
+    .kpi-card:hover {{transform: translateY(-6px); box-shadow: 0 14px 28px rgba(21,128,61,0.20);}}
+    .kpi-label {{font-size: .78rem; text-transform: uppercase; letter-spacing: .07em; color: #3d5a49; font-weight: 700;}}
     .kpi-value {{font-size: 1.9rem; font-weight: 800; margin: .15rem 0; color: {GREEN_DARK};}}
-    .kpi-range {{font-size: .82rem; color: #4b6b58;}}
+    .kpi-range {{font-size: .82rem; color: #3d5a49;}}
 
     .acc-card {{
         border-radius: 16px; padding: 1.2rem 1.4rem;
-        background: linear-gradient(135deg, #f0fdf4, #dcfce7);
-        border: 1px solid rgba(22,163,74,0.35);
+        background: linear-gradient(135deg, #d7e4db, #c9dcd0);
+        border: 1px solid rgba(21, 128, 61, 0.32);
         transition: transform .25s ease, box-shadow .25s ease;
     }}
-    .acc-card:hover {{transform: translateY(-4px); box-shadow: 0 12px 24px rgba(22,163,74,0.2);}}
+    .acc-card:hover {{transform: translateY(-4px); box-shadow: 0 12px 24px rgba(21,128,61,0.18);}}
     .acc-card h4 {{margin: 0 0 .3rem 0; color: {GREEN_DARK};}}
     .acc-big {{font-size: 1.8rem; font-weight: 800; color: {GREEN};}}
-    .acc-sub {{font-size: .85rem; color: #4b6b58;}}
+    .acc-sub {{font-size: .85rem; color: #3d5a49;}}
 
     .section-title {{font-size: 1.25rem; font-weight: 700; margin: 1.6rem 0 .6rem 0; color: {GREEN_DARK};}}
 
     /* ---------- Widgets ---------- */
     .stButton > button[kind="primary"] {{
-        background: linear-gradient(120deg, #16a34a, #22c55e); border: none; color: #fff;
+        background: linear-gradient(120deg, #14532d, #16a34a); border: none; color: #f3f7f4;
         font-weight: 700; border-radius: 12px; transition: transform .2s ease, box-shadow .2s ease;
     }}
-    .stButton > button[kind="primary"]:hover {{transform: translateY(-2px) scale(1.02);
-        box-shadow: 0 8px 20px rgba(22,163,74,.4);}}
+    .stButton > button[kind="primary"]:hover {{
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 0 8px 20px rgba(20, 83, 45, .35);
+    }}
     .stTabs [data-baseweb="tab"] {{font-weight: 600;}}
     .stTabs [aria-selected="true"] {{color: {GREEN} !important;}}
     .stTabs [data-baseweb="tab-highlight"] {{background-color: {GREEN};}}
-    [data-testid="stMetric"] {{background: rgba(255,255,255,0.85); border: 1px solid rgba(22,163,74,0.2);
-        border-radius: 14px; padding: .6rem .9rem; transition: transform .2s ease;}}
+    [data-testid="stMetric"] {{
+        background: rgba(235, 242, 237, 0.90);
+        border: 1px solid rgba(21, 128, 61, 0.22);
+        border-radius: 14px; padding: .6rem .9rem; transition: transform .2s ease;
+    }}
     [data-testid="stMetric"]:hover {{transform: translateY(-3px);}}
     </style>
     """,
@@ -187,12 +220,15 @@ def kpi_card(label, value, range_text, accent):
 
 def style_fig(fig, height=450):
     fig.update_layout(
-        template="plotly_white", height=height,
-        paper_bgcolor="rgba(255,255,255,0.0)", plot_bgcolor="rgba(255,255,255,0.75)",
-        font=dict(color="#0f2e1f"), margin=dict(l=10, r=10, t=70, b=10),
+        template="plotly_white",
+        height=height,
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(235, 242, 237, 0.82)",
+        font=dict(color="#0f2419"),
+        margin=dict(l=10, r=10, t=70, b=10),
     )
-    fig.update_xaxes(gridcolor="rgba(22,163,74,0.12)")
-    fig.update_yaxes(gridcolor="rgba(22,163,74,0.12)")
+    fig.update_xaxes(gridcolor="rgba(21,128,61,0.14)")
+    fig.update_yaxes(gridcolor="rgba(21,128,61,0.14)")
     return fig
 
 
@@ -289,7 +325,7 @@ st.markdown(
 )
 
 # ------------------------------------------------------------------
-# Sidebar
+# Sidebar (Collapsible)
 # ------------------------------------------------------------------
 if "has_run" not in st.session_state:
     st.session_state.has_run = False
@@ -395,7 +431,7 @@ if st.session_state.has_run:
                 unsafe_allow_html=True)
             c3.markdown(
                 kpi_card("Minimum demand", f"{low:,.0f} MW",
-                         f"Likely {max(low - MODEL_MAE, 0):,.0f} – {low + MODEL_MAE:,.0f} MW", "#0ea5e9"),
+                         f"Likely {max(low - MODEL_MAE, 0):,.0f} – {low + MODEL_MAE:,.0f} MW", "#0284c7"),
                 unsafe_allow_html=True)
             c4.markdown(
                 kpi_card("Total energy", f"{total:,.0f} MWh",
@@ -439,13 +475,13 @@ if st.session_state.has_run:
                     fig.add_trace(go.Scatter(
                         x=pd.concat([feat_df["Datetime"], feat_df["Datetime"][::-1]]),
                         y=pd.concat([feat_df["Upper_MW"], feat_df["Lower_MW"][::-1]]),
-                        fill="toself", fillcolor="rgba(34,197,94,0.20)",
+                        fill="toself", fillcolor="rgba(21,128,61,0.18)",
                         line=dict(color="rgba(0,0,0,0)"), hoverinfo="skip", name=label,
                     ))
                 if temp_shift != 0:
                     fig.add_trace(go.Scatter(
                         x=base_df["Datetime"], y=base_df["Predicted_MW"], mode="lines",
-                        name="Normal forecast", line=dict(color="#94a3b8", width=2, dash="dot"),
+                        name="Normal forecast", line=dict(color="#64748b", width=2, dash="dot"),
                         hovertemplate="%{y:,.0f} MW<extra></extra>",
                     ))
                 fig.add_trace(go.Scatter(
@@ -534,7 +570,7 @@ if st.session_state.has_run:
                     name="Predicted demand (MW)", line=dict(color=GREEN, width=3)))
                 fig2.add_trace(go.Scatter(
                     x=feat_df["Datetime"], y=feat_df["temperature_c"],
-                    name="Temperature (°C)", yaxis="y2", line=dict(color="#f97316", width=2)))
+                    name="Temperature (°C)", yaxis="y2", line=dict(color="#ea580c", width=2)))
                 fig2.update_layout(
                     title="Predicted demand vs temperature",
                     yaxis=dict(title="Demand (MW)"),
@@ -575,7 +611,7 @@ if st.session_state.has_run:
         except Exception as e:
             st.error(f"Error generating forecast: {e}")
 else:
-    st.info("👈 Choose a range in the sidebar and click **Predict Consumption**.")
+    st.info("👈 Click the green **>** button in the top-left corner to open **Forecast Settings** and click **Predict Consumption**.")
     m1, m2, m3 = st.columns(3)
     m1.metric("Model MAE", f"{MODEL_MAE:,.2f} MW", help="Average absolute difference between predicted and actual demand")
     m2.metric("Model RMSE", f"{MODEL_RMSE:,.2f} MW", help="Like MAE but penalises large errors more")
